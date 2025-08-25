@@ -15,40 +15,7 @@
     background: radial-gradient(1200px 800px at 50% 100%, var(--bg2), var(--bg1) 65%);
     color:#fff; overflow:hidden;
   }
-  /* ====== LOCK OVERLAY ====== */
-  #gate{
-    position:fixed; inset:0; display:grid; place-items:center; z-index:9999;
-    background:
-      radial-gradient(1200px 800px at 50% 40%, rgba(255,216,107,.14), rgba(0,0,0,.72)),
-      linear-gradient(135deg, rgba(10,6,32,.8), rgba(15,11,47,.8));
-    text-align:center; padding:24px;
-  }
-  #gate .panel{
-    max-width:720px; width:min(92vw,720px);
-    padding:22px; border-radius:16px;
-    background:linear-gradient(160deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
-    border:1px solid rgba(255,255,255,.28);
-    box-shadow:0 20px 60px rgba(0,0,0,.45);
-  }
-  #gate h2{margin:8px 0 6px; font-size:clamp(22px,5vw,36px)}
-  #gate p{margin:6px 0 14px; opacity:.92}
-  #countdown{
-    font-variant-numeric:tabular-nums; font-weight:800;
-    font-size:clamp(20px,6vw,42px);
-    letter-spacing:1px;
-    background:linear-gradient(90deg,#ffd86b,#ff77aa);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow:0 0 0 rgba(0,0,0,0);
-  }
-  #gate small{opacity:.8; display:block; margin-top:8px}
-  #gate .hint{margin-top:10px; font-size:.9rem; opacity:.75}
 
-  /* blur/disable the game while locked */
-  body[data-locked="1"] #content{
-    filter:blur(6px) saturate(60%); pointer-events:none; user-select:none;
-  }
-
-  /* ====== GAME (same as before) ====== */
   header{
     position:fixed; inset:0 0 auto 0; height:84px; display:flex;
     align-items:center; justify-content:center; flex-direction:column; pointer-events:none;
@@ -114,20 +81,8 @@
   @media (min-width:900px){ #controls{display:none} }
 </style>
 </head>
-<body data-locked="1">
-  <!-- ====== LOCK OVERLAY ====== -->
-  <div id="gate" aria-modal="true" role="dialog">
-    <div class="panel">
-      <h2>🎁 Surprise unlocks on <span style="color:var(--accent2)">Aug 25</span></h2>
-      <p>Come back when the clock hits midnight (Toronto time). Your Level 20 gift will be ready. ✨</p>
-      <div id="countdown">00:00:00:00</div>
-      <small>Days : Hours : Minutes : Seconds</small>
-      <div class="hint">Time zone: America/Toronto (EDT)</div>
-    </div>
-  </div>
-
-  <!-- ====== GAME CONTENT (unchanged) ====== -->
-  <div id="content" aria-hidden="true">
+<body>
+  <div id="content">
     <header>
       <h1>🎮 LEVEL 20: Happy Birthday, <span style="color:var(--accent2)">Amisha</span>! 🎂</h1>
       <div id="hud" aria-live="polite">
@@ -144,7 +99,8 @@
       <div class="card">
         <h2>LEVEL 20 COMPLETE 🎉</h2>
         <p> Amisha! You collected all the love today.<b>🌸✨ Happy 20th Birthday, Amisha! ✨🌸</p>
-        <p>May this new chapter bring you endless smiles 😊, countless little adventures 🌍, and memories brighter than fireworks 🎆. Twenty is not just a number  it’s a whole level unlocked in the game of life 🎮💖. I hope your days ahead are filled with laughter 😂, cozy moments ☕, and dreams that keep growing bigger 🌈🌟. Keep shining the way you always do, because the world feels a little better with your light in it ✨💐.</p> <p>-Rakshit🚀😊</p>
+        <p>May this new chapter bring you endless smiles 😊, countless little adventures 🌍, and memories brighter than fireworks 🎆. Twenty is not just a number — it’s a whole level unlocked in the game of life 🎮💖. I hope your days ahead are filled with laughter 😂, cozy moments ☕, and dreams that keep growing bigger 🌈🌟. Keep shining the way you always do, because the world feels a little better with your light in it ✨💐.</p>
+        <p>-Rakshit🚀😊</p>
         <button class="btn" id="playAgain">Play again</button>
       </div>
     </div>
@@ -163,60 +119,6 @@
   </div>
 
 <script>
-/* ========== RELEASE GATE (Toronto midnight Aug 25, 2025) ========== */
-/* We lock until 2025-08-25 00:00 America/Toronto, which is 2025-08-25 04:00:00 UTC (EDT = UTC-4) */
-const TARGET_UTC_MS = Date.UTC(2025, 7, 25, 4, 0, 0); // month is 0-based: 7 = August
-const gateEl = document.getElementById('gate');
-const cdEl = document.getElementById('countdown');
-
-/* Optional: developer bypass for testing. Remove this line if you want zero bypass. */
-const DEV_BYPASS = new URLSearchParams(location.search).has('dev');
-
-/* If already unlocked once (after the date), remember it */
-if (localStorage.getItem('amisha_release_unlocked') === '1') {
-  unlock();
-} else {
-  startCountdown();
-}
-
-function startCountdown(){
-  if(DEV_BYPASS || Date.now() >= TARGET_UTC_MS){
-    unlock();
-    return;
-  }
-  updateCountdown();
-  const t = setInterval(()=>{
-    if(Date.now() >= TARGET_UTC_MS){
-      clearInterval(t);
-      unlock();
-    } else {
-      updateCountdown();
-    }
-  }, 1000);
-}
-
-/* Display D:H:M:S remaining */
-function updateCountdown(){
-  const diff = TARGET_UTC_MS - Date.now();
-  const s = Math.max(0, Math.floor(diff/1000));
-  const d = Math.floor(s/86400);
-  const h = Math.floor((s%86400)/3600);
-  const m = Math.floor((s%3600)/60);
-  const sec = s%60;
-  cdEl.textContent = `${String(d).padStart(2,'0')}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-}
-
-/* Reveal game, enable input, hide gate */
-function unlock(){
-  localStorage.setItem('amisha_release_unlocked','1');
-  document.body.dataset.locked = '0';
-  document.getElementById('content').removeAttribute('aria-hidden');
-  gateEl.style.display = 'none';
-}
-
-/* =========================
-   GAME CODE (same as your awesome version)
-========================= */
 const MESSAGES = [
   "You’re 20 and unstoppable! ✨", "Level 20 unlocked! 🎮", "Too cool for teen drama 😎",
   "You’re a walking sunshine ☀️", "Best vibe machine 🌈", "Dream it. Do it. 🚀",
@@ -244,7 +146,7 @@ const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 const rand = (a,b)=>Math.random()*(b-a)+a;
 function formatTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return String(m).padStart(2,'0')+":"+String(s).padStart(2,'0'); }
 
-/* Audio (beeps) */
+/* Audio */
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 function beep(freq=660, dur=0.08, type='sine'){
   const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
@@ -296,19 +198,17 @@ function burstConfetti(){
 /* Input */
 const keys = new Set();
 addEventListener('keydown', e=>{
-  if(document.body.dataset.locked==="1") return; // disable before release
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Space','w','a','s','d','W','A','S','D'].includes(e.key)){ e.preventDefault(); }
   if(e.code==='Space'){ keys.add('Space'); } else { keys.add(e.key); }
   audioCtx.resume?.();
 });
 addEventListener('keyup', e=>{
-  if(document.body.dataset.locked==="1") return;
   if(e.code==='Space'){ keys.delete('Space'); } else { keys.delete(e.key); }
 });
 
 /* touch controls */
 const ctlEls = Array.from(document.querySelectorAll('.ctl'));
-function press(k){ if(document.body.dataset.locked==="1") return; keys.add(k); }
+function press(k){ keys.add(k); }
 function release(k){ keys.delete(k); }
 ctlEls.forEach(el=>{
   const k = el.dataset.k;
@@ -395,58 +295,4 @@ function drawHearts(t){
     ctx.beginPath();
     ctx.moveTo(0,-r*0.2);
     ctx.bezierCurveTo(r,-r, r*1.6, -r*0.1, 0, r);
-    ctx.bezierCurveTo(-r*1.6, -r*0.1, -r, -r, 0, -r*0.2);
-    ctx.fillStyle = 'rgba(255,120,180,0.95)'; ctx.fill();
-    ctx.restore();
-  });
-}
-function drawPlayer(t){
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.r+8+Math.sin(t*0.008)*2, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,216,107,.25)'; ctx.fill();
-  ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-  ctx.fillStyle = '#7ef9a9'; ctx.fill();
-  ctx.fillStyle = '#16354d';
-  ctx.beginPath(); ctx.arc(player.x-5, player.y-3, 2.5, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(player.x+5, player.y-3, 2.5, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(player.x, player.y+2, 6, Math.PI*0.15, Math.PI-0.15);
-  ctx.lineWidth = 2; ctx.strokeStyle = '#16354d'; ctx.stroke();
-}
-function drawFireworks(){
-  for(let i=fireworks.length-1;i>=0;i--){
-    const p = fireworks[i];
-    p.x += p.vx; p.y += p.vy; p.life--; p.vy += 0.02;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 2, 2);
-    ctx.globalCompositeOperation = 'source-over';
-    if(p.life<=0) fireworks.splice(i,1);
-  }
-}
-function drawConfetti(){
-  confetti.forEach(c=>{
-    c.y += c.vy; c.rot += c.vr;
-    if(c.y>H) c.y = -20;
-    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot);
-    ctx.fillStyle = c.color; ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h); ctx.restore();
-  });
-}
-
-let last = performance.now();
-function frame(now){
-  const dt = now - last; last = now;
-  drawBackground(now);
-  update(dt);
-  drawHearts(now);
-  drawPlayer(now);
-  drawFireworks();
-  drawConfetti();
-  requestAnimationFrame(frame);
-}
-reset();
-requestAnimationFrame(frame);
-
-/* Play again */
-playAgain.addEventListener('click', reset);
-</script>
-</body>
-</html>
+    ctx.bezierCurveTo(-r*1.6, -r*0.1, -r, -r, 0, -r*
