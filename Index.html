@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Level 20: Happy Birthday, Amisha! 🎉</title>
+<style>
+  :root{
+    --bg1:#1a1446; --bg2:#352a84; --accent:#ff77aa; --accent2:#ffd86b; --good:#7ef9a9;
+    --hud:#ffffffcc; --btn:#ffffff; --btnText:#5d3fd3;
+  }
+  html,body{height:100%;margin:0}
+  body{
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+    background: radial-gradient(1200px 800px at 50% 100%, var(--bg2), var(--bg1) 65%);
+    color:#fff; overflow:hidden;
+  }
+  /* ====== LOCK OVERLAY ====== */
+  #gate{
+    position:fixed; inset:0; display:grid; place-items:center; z-index:9999;
+    background:
+      radial-gradient(1200px 800px at 50% 40%, rgba(255,216,107,.14), rgba(0,0,0,.72)),
+      linear-gradient(135deg, rgba(10,6,32,.8), rgba(15,11,47,.8));
+    text-align:center; padding:24px;
+  }
+  #gate .panel{
+    max-width:720px; width:min(92vw,720px);
+    padding:22px; border-radius:16px;
+    background:linear-gradient(160deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+    border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+  }
+  #gate h2{margin:8px 0 6px; font-size:clamp(22px,5vw,36px)}
+  #gate p{margin:6px 0 14px; opacity:.92}
+  #countdown{
+    font-variant-numeric:tabular-nums; font-weight:800;
+    font-size:clamp(20px,6vw,42px);
+    letter-spacing:1px;
+    background:linear-gradient(90deg,#ffd86b,#ff77aa);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 0 rgba(0,0,0,0);
+  }
+  #gate small{opacity:.8; display:block; margin-top:8px}
+  #gate .hint{margin-top:10px; font-size:.9rem; opacity:.75}
+
+  /* blur/disable the game while locked */
+  body[data-locked="1"] #content{
+    filter:blur(6px) saturate(60%); pointer-events:none; user-select:none;
+  }
+
+  /* ====== GAME (same as before) ====== */
+  header{
+    position:fixed; inset:0 0 auto 0; height:84px; display:flex;
+    align-items:center; justify-content:center; flex-direction:column; pointer-events:none;
+  }
+  h1{
+    margin:12px 10px 4px; font-weight:800; letter-spacing:.5px; font-size:clamp(22px,4vw,36px);
+    text-shadow:0 2px 14px rgba(0,0,0,.45);
+    animation:glow 2.4s ease-in-out infinite alternate;
+  }
+  @keyframes glow{
+    from{ text-shadow:0 0 12px rgba(255,120,190,.7), 0 0 24px rgba(255,216,107,.35) }
+    to{   text-shadow:0 0 22px rgba(255,216,107,.95), 0 0 48px rgba(255,120,190,.35)}
+  }
+  #hud{
+    backdrop-filter:saturate(120%) blur(6px);
+    background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));
+    border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:14px; padding:6px 12px; display:flex; gap:14px; align-items:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    pointer-events:auto;
+  }
+  #hud small{opacity:.9}
+  #hud .dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--accent2);margin-right:6px}
+  #canvas{display:block;position:fixed;inset:0;z-index:-1}
+  #msg{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    max-width:min(92vw,820px);
+    padding:12px 16px; border-radius:12px; text-align:center; font-weight:600;
+    background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.08));
+    border:1px solid rgba(255,255,255,.25);
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    opacity:0; transition:opacity .35s, transform .35s;
+  }
+  #msg.show{opacity:1; transform:translateX(-50%) translateY(-4px)}
+  #finish{
+    position:fixed; inset:0; display:none; place-items:center; text-align:center; padding:20px;
+    background: radial-gradient(1000px 700px at 50% 40%, rgba(255,216,107,.18), rgba(0,0,0,.0));
+  }
+  #finish .card{
+    padding:22px 26px; border-radius:16px;
+    background:linear-gradient(160deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+    border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+  }
+  #finish h2{margin:6px 0 8px;font-size:clamp(26px,4.6vw,44px)}
+  #finish p{margin:0 0 8px;opacity:.92}
+  #finish .btn{
+    margin-top:10px; padding:10px 16px; border-radius:12px; border:0; cursor:pointer;
+    background:var(--btn); color:var(--btnText); font-weight:800;
+  }
+  #controls{
+    position:fixed; right:14px; bottom:14px; display:grid; grid-template-columns:repeat(3,54px);
+    grid-template-rows:repeat(3,54px); gap:10px; touch-action:none;
+  }
+  .ctl{
+    border-radius:14px; border:1px solid rgba(255,255,255,.35);
+    background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.78));
+    color:#3b2fb5; font-weight:900; display:grid; place-items:center; user-select:none;
+    box-shadow:0 8px 22px rgba(0,0,0,.25);
+  }
+  .ctl:active{transform:translateY(2px); box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  #controls .sp{opacity:0}
+  @media (min-width:900px){ #controls{display:none} }
+</style>
+</head>
+<body data-locked="1">
+  <!-- ====== LOCK OVERLAY ====== -->
+  <div id="gate" aria-modal="true" role="dialog">
+    <div class="panel">
+      <h2>🎁 Surprise unlocks on <span style="color:var(--accent2)">Aug 25</span></h2>
+      <p>Come back when the clock hits midnight (Toronto time). Your Level 20 gift will be ready. ✨</p>
+      <div id="countdown">00:00:00:00</div>
+      <small>Days : Hours : Minutes : Seconds</small>
+      <div class="hint">Time zone: America/Toronto (EDT)</div>
+    </div>
+  </div>
+
+  <!-- ====== GAME CONTENT (unchanged) ====== -->
+  <div id="content" aria-hidden="true">
+    <header>
+      <h1>🎮 LEVEL 20: Happy Birthday, <span style="color:var(--accent2)">Amisha</span>! 🎂</h1>
+      <div id="hud" aria-live="polite">
+        <small><span class="dot"></span><b>Hearts:</b> <span id="count">0</span>/20</small>
+        <small><b>Time:</b> <span id="time">00:00</span></small>
+        <small><b>Controls:</b> ⬅️⬆️➡️⬇️ or WASD • Space = dash</small>
+      </div>
+    </header>
+
+    <canvas id="canvas" aria-label="Birthday Game Canvas"></canvas>
+    <div id="msg" role="status"></div>
+
+    <div id="finish">
+      <div class="card">
+        <h2>LEVEL 20 COMPLETE 🎉</h2>
+        <p> Amisha! You collected all the love today.<b>🌸✨ Happy 20th Birthday, Amisha! ✨🌸</p>
+        <p>May this new chapter bring you endless smiles 😊, countless little adventures 🌍, and memories brighter than fireworks 🎆. Twenty is not just a number  it’s a whole level unlocked in the game of life 🎮💖. I hope your days ahead are filled with laughter 😂, cozy moments ☕, and dreams that keep growing bigger 🌈🌟. Keep shining the way you always do, because the world feels a little better with your light in it ✨💐.</p> <p>-Rakshit🚀😊</p>
+        <button class="btn" id="playAgain">Play again</button>
+      </div>
+    </div>
+
+    <div id="controls" aria-hidden="true">
+      <div class="sp"></div>
+      <div class="ctl" data-k="ArrowUp">▲</div>
+      <div class="sp"></div>
+      <div class="ctl" data-k="ArrowLeft">◀</div>
+      <div class="ctl" data-k="Space">●</div>
+      <div class="ctl" data-k="ArrowRight">▶</div>
+      <div class="sp"></div>
+      <div class="ctl" data-k="ArrowDown">▼</div>
+      <div class="sp"></div>
+    </div>
+  </div>
+
+<script>
+/* ========== RELEASE GATE (Toronto midnight Aug 25, 2025) ========== */
+/* We lock until 2025-08-25 00:00 America/Toronto, which is 2025-08-25 04:00:00 UTC (EDT = UTC-4) */
+const TARGET_UTC_MS = Date.UTC(2025, 7, 25, 4, 0, 0); // month is 0-based: 7 = August
+const gateEl = document.getElementById('gate');
+const cdEl = document.getElementById('countdown');
+
+/* Optional: developer bypass for testing. Remove this line if you want zero bypass. */
+const DEV_BYPASS = new URLSearchParams(location.search).has('dev');
+
+/* If already unlocked once (after the date), remember it */
+if (localStorage.getItem('amisha_release_unlocked') === '1') {
+  unlock();
+} else {
+  startCountdown();
+}
+
+function startCountdown(){
+  if(DEV_BYPASS || Date.now() >= TARGET_UTC_MS){
+    unlock();
+    return;
+  }
+  updateCountdown();
+  const t = setInterval(()=>{
+    if(Date.now() >= TARGET_UTC_MS){
+      clearInterval(t);
+      unlock();
+    } else {
+      updateCountdown();
+    }
+  }, 1000);
+}
+
+/* Display D:H:M:S remaining */
+function updateCountdown(){
+  const diff = TARGET_UTC_MS - Date.now();
+  const s = Math.max(0, Math.floor(diff/1000));
+  const d = Math.floor(s/86400);
+  const h = Math.floor((s%86400)/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  cdEl.textContent = `${String(d).padStart(2,'0')}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+/* Reveal game, enable input, hide gate */
+function unlock(){
+  localStorage.setItem('amisha_release_unlocked','1');
+  document.body.dataset.locked = '0';
+  document.getElementById('content').removeAttribute('aria-hidden');
+  gateEl.style.display = 'none';
+}
+
+/* =========================
+   GAME CODE (same as your awesome version)
+========================= */
+const MESSAGES = [
+  "You’re 20 and unstoppable! ✨", "Level 20 unlocked! 🎮", "Too cool for teen drama 😎",
+  "You’re a walking sunshine ☀️", "Best vibe machine 🌈", "Dream it. Do it. 🚀",
+  "People smile when you arrive 😊", "Sparkle mode: ON ✨", "Stay golden, Amisha 💛",
+  "You make days brighter ☀️", "Main character energy 🎬", "Soft heart, strong mind 💖",
+  "Magic follows you ✨", "Never stop laughing 😂", "You’re unforgettable ⭐",
+  "Today is YOUR stage 🎤", "Here’s to bold choices 🥂", "Glow keeper 🌟",
+  "Kindness level: MAX 💞", "Happy 20th, legend! 🎂"
+];
+const MAX_HEARTS = 20;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const msg = document.getElementById('msg');
+const countEl = document.getElementById('count');
+const timeEl = document.getElementById('time');
+const finish = document.getElementById('finish');
+const playAgain = document.getElementById('playAgain');
+
+let W = innerWidth, H = innerHeight;
+canvas.width = W; canvas.height = H;
+addEventListener('resize', ()=>{ W = innerWidth; H = innerHeight; canvas.width = W; canvas.height = H; });
+
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+const rand = (a,b)=>Math.random()*(b-a)+a;
+function formatTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return String(m).padStart(2,'0')+":"+String(s).padStart(2,'0'); }
+
+/* Audio (beeps) */
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+function beep(freq=660, dur=0.08, type='sine'){
+  const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+  o.type=type; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination);
+  g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
+  o.start(); o.stop(audioCtx.currentTime+dur);
+}
+
+/* World */
+const player = { x: W*0.5, y: H*0.6, r: 16, vx:0, vy:0, speed: 0.33, max: 4.2, dash:0 };
+let hearts = [], fireworks = [], confetti = [];
+let collected = 0, startTime = performance.now(), finished = false;
+
+function genHearts(){
+  hearts = [];
+  const pad = 60, tries = 1200;
+  for(let i=0;i<MAX_HEARTS && i<tries;i++){
+    let x = rand(pad, W-pad), y = rand(pad+100, H-pad);
+    if(Math.hypot(x-player.x, y-player.y) < 140){ i--; continue; }
+    let ok = hearts.every(h=> Math.hypot(x-h.x, y-h.y) > 64 );
+    if(ok) hearts.push({x,y,r:12, t:0, msg: MESSAGES[i]}); else i--;
+  }
+}
+
+function launchFireworks(){
+  for(let n=0;n<8;n++){
+    const cx = rand(W*0.15, W*0.85), cy = rand(H*0.15, H*0.45);
+    for(let i=0;i<120;i++){
+      const ang = Math.random()*Math.PI*2;
+      fireworks.push({
+        x:cx, y:cy, vx:Math.cos(ang)*rand(1.2,4.2), vy:Math.sin(ang)*rand(1.2,4.2),
+        life: rand(70,120), color:`hsl(${Math.floor(rand(0,360))},100%,60%)`
+      });
+    }
+  }
+}
+function burstConfetti(){
+  for(let i=0;i<300;i++){
+    confetti.push({
+      x: rand(0, W), y: rand(-H, 0), w: rand(4,10), h: rand(8,16),
+      vy: rand(2,5), rot: rand(0,Math.PI), vr: rand(-0.1,0.1),
+      color:`hsl(${Math.floor(rand(0,360))},90%,60%)`
+    });
+  }
+}
+
+/* Input */
+const keys = new Set();
+addEventListener('keydown', e=>{
+  if(document.body.dataset.locked==="1") return; // disable before release
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Space','w','a','s','d','W','A','S','D'].includes(e.key)){ e.preventDefault(); }
+  if(e.code==='Space'){ keys.add('Space'); } else { keys.add(e.key); }
+  audioCtx.resume?.();
+});
+addEventListener('keyup', e=>{
+  if(document.body.dataset.locked==="1") return;
+  if(e.code==='Space'){ keys.delete('Space'); } else { keys.delete(e.key); }
+});
+
+/* touch controls */
+const ctlEls = Array.from(document.querySelectorAll('.ctl'));
+function press(k){ if(document.body.dataset.locked==="1") return; keys.add(k); }
+function release(k){ keys.delete(k); }
+ctlEls.forEach(el=>{
+  const k = el.dataset.k;
+  el.addEventListener('touchstart', e=>{ e.preventDefault(); press(k); audioCtx.resume?.(); });
+  el.addEventListener('touchend',   e=>{ e.preventDefault(); release(k); });
+  el.addEventListener('touchcancel',e=>{ e.preventDefault(); release(k); });
+});
+
+/* Loop helpers */
+function showMessage(text){
+  msg.textContent = text;
+  msg.classList.add('show');
+  clearTimeout(showMessage._t);
+  showMessage._t = setTimeout(()=> msg.classList.remove('show'), 2000);
+}
+
+function reset(){
+  collected = 0; countEl.textContent = '0';
+  finished = false;
+  player.x = W*0.5; player.y = H*0.6; player.vx=0; player.vy=0; player.dash=0;
+  startTime = performance.now();
+  genHearts();
+  fireworks.length=0; confetti.length=0;
+  finish.style.display='none';
+}
+
+function update(dt){
+  if(finished) return;
+
+  const ax = (keys.has('ArrowRight')||keys.has('d')||keys.has('D')) - (keys.has('ArrowLeft')||keys.has('a')||keys.has('A'));
+  const ay = (keys.has('ArrowDown')||keys.has('s')||keys.has('S')) - (keys.has('ArrowUp')||keys.has('w')||keys.has('W'));
+  const speed = player.speed * (keys.has('Space') ? 2.3 : 1);
+  if(keys.has('Space') && player.dash<=0){ player.dash=0.15; beep(220,0.06,'square'); }
+  player.vx += ax * speed * dt; player.vy += ay * speed * dt;
+  player.vx *= 0.90; player.vy *= 0.90;
+
+  const m = Math.hypot(player.vx, player.vy);
+  const max = keys.has('Space') ? player.max*1.4 : player.max;
+  if(m>max){ player.vx *= max/m; player.vy*=max/m; }
+
+  player.x = Math.max(player.r, Math.min(W-player.r, player.x + player.vx));
+  player.y = Math.max(player.r+90, Math.min(H-player.r, player.y + player.vy));
+
+  player.dash = Math.max(0, player.dash - dt/1000);
+
+  for(let i=hearts.length-1;i>=0;i--){
+    const h = hearts[i]; h.t += dt*0.005;
+    if(Math.hypot(player.x-h.x, player.y-h.y) < player.r + h.r){
+      hearts.splice(i,1);
+      collected++; countEl.textContent = collected;
+      beep(740,0.06,'triangle'); setTimeout(()=>beep(880,0.06,'triangle'),50);
+      showMessage(h.msg);
+    }
+  }
+
+  const elapsed = (performance.now()-startTime)/1000;
+  timeEl.textContent = formatTime(elapsed);
+
+  if(collected>=MAX_HEARTS && !finished){
+    finished = true;
+    showMessage("LEVEL 20 COMPLETE! 🎉");
+    burstConfetti();
+    launchFireworks();
+    setTimeout(()=> finish.style.display='grid', 700);
+  }
+}
+
+function drawBackground(t){
+  ctx.fillStyle = '#0f0b2f'; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<120;i++){
+    const x = (i*97 + (t*0.02)) % (W+200) - 100;
+    const y = (i*53 % H);
+    ctx.fillStyle = i%9==0 ? '#ffd86b' : '#9ea8ff';
+    ctx.globalAlpha = (i%7==0) ? 0.95 : 0.6;
+    ctx.fillRect(x, y, i%7==0?2:1, i%11==0?2:1);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawHearts(t){
+  hearts.forEach(h=>{
+    const pulse = 1 + Math.sin(t*0.004 + h.x*0.01)*0.08;
+    ctx.save(); ctx.translate(h.x, h.y); ctx.scale(pulse,pulse);
+    const r = h.r;
+    ctx.beginPath();
+    ctx.moveTo(0,-r*0.2);
+    ctx.bezierCurveTo(r,-r, r*1.6, -r*0.1, 0, r);
+    ctx.bezierCurveTo(-r*1.6, -r*0.1, -r, -r, 0, -r*0.2);
+    ctx.fillStyle = 'rgba(255,120,180,0.95)'; ctx.fill();
+    ctx.restore();
+  });
+}
+function drawPlayer(t){
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r+8+Math.sin(t*0.008)*2, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,216,107,.25)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+  ctx.fillStyle = '#7ef9a9'; ctx.fill();
+  ctx.fillStyle = '#16354d';
+  ctx.beginPath(); ctx.arc(player.x-5, player.y-3, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(player.x+5, player.y-3, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(player.x, player.y+2, 6, Math.PI*0.15, Math.PI-0.15);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#16354d'; ctx.stroke();
+}
+function drawFireworks(){
+  for(let i=fireworks.length-1;i>=0;i--){
+    const p = fireworks[i];
+    p.x += p.vx; p.y += p.vy; p.life--; p.vy += 0.02;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 2, 2);
+    ctx.globalCompositeOperation = 'source-over';
+    if(p.life<=0) fireworks.splice(i,1);
+  }
+}
+function drawConfetti(){
+  confetti.forEach(c=>{
+    c.y += c.vy; c.rot += c.vr;
+    if(c.y>H) c.y = -20;
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot);
+    ctx.fillStyle = c.color; ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h); ctx.restore();
+  });
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = now - last; last = now;
+  drawBackground(now);
+  update(dt);
+  drawHearts(now);
+  drawPlayer(now);
+  drawFireworks();
+  drawConfetti();
+  requestAnimationFrame(frame);
+}
+reset();
+requestAnimationFrame(frame);
+
+/* Play again */
+playAgain.addEventListener('click', reset);
+</script>
+</body>
+</html>
