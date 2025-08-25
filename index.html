@@ -27,8 +27,10 @@
 
   /* HEADER & HUD */
   header{
-    position:fixed; inset:0 0 auto 0; height:84px; display:flex;
+    position:fixed; top:0; left:0; right:0; height:auto; display:flex;
     align-items:center; justify-content:center; flex-direction:column; pointer-events:none;
+    z-index:5;
+    padding-top:12px;
   }
 
   h1{
@@ -49,6 +51,7 @@
     color:#fff; border-radius:14px; padding:6px 12px; display:flex; gap:14px; align-items:center;
     box-shadow:0 10px 30px rgba(0,0,0,.25);
     pointer-events:auto;
+    margin-bottom:10px;
   }
 
   #hud small{opacity:.9}
@@ -76,7 +79,7 @@
   #finish{
     position:fixed; inset:0; display:none; place-items:center; text-align:center; padding:20px;
     background: radial-gradient(1000px 700px at 50% 40%, rgba(255,216,107,.18), rgba(0,0,0,.0));
-    z-index:3;
+    z-index:4;
   }
   #finish .card{
     padding:22px 26px; border-radius:16px;
@@ -116,6 +119,8 @@
     display:flex; justify-content:center; align-items:center;
     font-size:24px; color:black;
     z-index:1; /* above canvas but below HUD */
+    top:50%; left:50%;
+    transform:translate(-50%, -50%);
   }
 
 </style>
@@ -414,6 +419,7 @@ playAgain.addEventListener('click', reset);
 
 
 </script>
+
 
 
 
