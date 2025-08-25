@@ -119,10 +119,9 @@
   </div>
 
 <script>
-
-// =========================
-// GAME SCRIPT
-// =========================
+/* =========================
+   Config & Globals
+========================= */
 const MESSAGES = [
   "You’re 20 and unstoppable! ✨", "Level 20 unlocked! 🎮", "Too cool for teen drama 😎",
   "You’re a walking sunshine ☀️", "Best vibe machine 🌈", "Dream it. Do it. 🚀",
@@ -138,43 +137,63 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 const msg = document.getElementById('msg');
 const countEl = document.getElementById('count');
-const timeEl = document.getElementById('time');
 const finish = document.getElementById('finish');
 const playAgain = document.getElementById('playAgain');
 
 let W = innerWidth, H = innerHeight;
 canvas.width = W; canvas.height = H;
-addEventListener('resize', ()=>{ W = innerWidth; H = innerHeight; canvas.width = W; canvas.height = H; });
 
+addEventListener('resize', ()=>{
+  W = innerWidth; H = innerHeight; canvas.width = W; canvas.height = H;
+});
+
+/* =========================
+   Utility
+========================= */
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 const rand = (a,b)=>Math.random()*(b-a)+a;
-function formatTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return String(m).padStart(2,'0')+":"+String(s).padStart(2,'0'); }
 
+/* =========================
+   Audio (beeps via WebAudio)
+========================= */
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 function beep(freq=660, dur=0.08, type='sine'){
-  const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-  o.type=type; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination);
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(audioCtx.destination);
   g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime+0.01);
   g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
   o.start(); o.stop(audioCtx.currentTime+dur);
 }
 
-const player = { x: W*0.5, y: H*0.6, r: 16, vx:0, vy:0, speed: 0.33, max: 4.2, dash:0 };
-let hearts = [], fireworks = [], confetti = [];
-let collected = 0, startTime = performance.now(), finished = false;
+/* =========================
+   World / Entities
+========================= */
+const player = {
+  x: W*0.5, y: H*0.6, r: 16, vx:0, vy:0, speed: 0.33, max: 4.2, dash:0
+};
+let hearts = [];
+let fireworks = [];
+let confetti = [];
+let collected = 0;
+let finished = false;
 
+/* generate non-overlapping heart positions */
 function genHearts(){
   hearts = [];
   const pad = 60, tries = 1200;
   for(let i=0;i<MAX_HEARTS && i<tries;i++){
-    let x = rand(pad, W-pad), y = rand(pad+100, H-pad);
-    if(Math.hypot(x-player.x, y-player.y) < 140){ i--; continue; }
+    let x = rand(pad, W-pad), y = rand(pad+100, H-pad); // avoid HUD area
+    if(Math.hypot(x-player.x, y-player.y) < 140) { i--; continue; }
     let ok = hearts.every(h=> Math.hypot(x-h.x, y-h.y) > 64 );
-    if(ok) hearts.push({x,y,r:12, t:0, msg: MESSAGES[i]}); else i--;
+    if(ok) hearts.push({x,y,r:12, t:0, msg: MESSAGES[i]});
+    else i--;
   }
 }
 
-// Fireworks & confetti
+/* fireworks particles */
 function launchFireworks(){
   for(let n=0;n<8;n++){
     const cx = rand(W*0.15, W*0.85), cy = rand(H*0.15, H*0.45);
@@ -197,18 +216,33 @@ function burstConfetti(){
   }
 }
 
-// Controls
+/* =========================
+   Input
+========================= */
 const keys = new Set();
 addEventListener('keydown', e=>{
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Space','w','a','s','d','W','A','S','D'].includes(e.key)){ e.preventDefault(); }
-  keys.add(e.code==='Space'?'Space':e.key);
+  if(e.code==='Space'){ keys.add('Space'); } else { keys.add(e.key); }
   audioCtx.resume?.();
 });
 addEventListener('keyup', e=>{
-  keys.delete(e.code==='Space'?'Space':e.key);
+  if(e.code==='Space'){ keys.delete('Space'); } else { keys.delete(e.key); }
 });
 
-// Message
+/* touch controls */
+const ctlEls = Array.from(document.querySelectorAll('.ctl'));
+function press(k){ keys.add(k); }
+function release(k){ keys.delete(k); }
+ctlEls.forEach(el=>{
+  const k = el.dataset.k;
+  el.addEventListener('touchstart', e=>{ e.preventDefault(); press(k); audioCtx.resume?.(); });
+  el.addEventListener('touchend',   e=>{ e.preventDefault(); release(k); });
+  el.addEventListener('touchcancel',e=>{ e.preventDefault(); release(k); });
+});
+
+/* =========================
+   Game Loop
+========================= */
 function showMessage(text){
   msg.textContent = text;
   msg.classList.add('show');
@@ -216,36 +250,41 @@ function showMessage(text){
   showMessage._t = setTimeout(()=> msg.classList.remove('show'), 2000);
 }
 
-// Reset game
 function reset(){
   collected = 0; countEl.textContent = '0';
   finished = false;
   player.x = W*0.5; player.y = H*0.6; player.vx=0; player.vy=0; player.dash=0;
-  startTime = performance.now();
   genHearts();
   fireworks.length=0; confetti.length=0;
   finish.style.display='none';
 }
 
-// Update loop
 function update(dt){
   if(finished) return;
 
+  // movement
   const ax = (keys.has('ArrowRight')||keys.has('d')||keys.has('D')) - (keys.has('ArrowLeft')||keys.has('a')||keys.has('A'));
   const ay = (keys.has('ArrowDown')||keys.has('s')||keys.has('S')) - (keys.has('ArrowUp')||keys.has('w')||keys.has('W'));
   const speed = player.speed * (keys.has('Space') ? 2.3 : 1);
   if(keys.has('Space') && player.dash<=0){ player.dash=0.15; beep(220,0.06,'square'); }
-  player.vx += ax * speed * dt; player.vy += ay * speed * dt;
+  player.vx += ax * speed * dt;
+  player.vy += ay * speed * dt;
+
   player.vx *= 0.90; player.vy *= 0.90;
+
   const m = Math.hypot(player.vx, player.vy);
   const max = keys.has('Space') ? player.max*1.4 : player.max;
   if(m>max){ player.vx *= max/m; player.vy*=max/m; }
-  player.x = Math.max(player.r, Math.min(W-player.r, player.x + player.vx));
-  player.y = Math.max(player.r+90, Math.min(H-player.r, player.y + player.vy));
+
+  player.x = clamp(player.x + player.vx, player.r, W-player.r);
+  player.y = clamp(player.y + player.vy, player.r+90, H-player.r);
+
   player.dash = Math.max(0, player.dash - dt/1000);
 
+  // collect hearts
   for(let i=hearts.length-1;i>=0;i--){
-    const h = hearts[i]; h.t += dt*0.005;
+    const h = hearts[i];
+    h.t += dt*0.005;
     if(Math.hypot(player.x-h.x, player.y-h.y) < player.r + h.r){
       hearts.splice(i,1);
       collected++; countEl.textContent = collected;
@@ -254,9 +293,7 @@ function update(dt){
     }
   }
 
-  const elapsed = (performance.now()-startTime)/1000;
-  timeEl.textContent = formatTime(elapsed);
-
+  // finish
   if(collected>=MAX_HEARTS && !finished){
     finished = true;
     showMessage("LEVEL 20 COMPLETE! 🎉");
@@ -266,31 +303,95 @@ function update(dt){
   }
 }
 
-// Draw loop
-function draw(t){
-  ctx.fillStyle = '#0f0b2f'; ctx.fillRect(0,0,W,H);
+function drawBackground(t){
+  ctx.fillStyle = '#0f0b2f';
+  ctx.fillRect(0,0,W,H);
+  for(let i=0;i<120;i++){
+    const x = (i*97 + (t*0.02)) % (W+200) - 100;
+    const y = (i*53 % H);
+    ctx.fillStyle = i%9==0 ? '#ffd86b' : '#9ea8ff';
+    ctx.globalAlpha = (i%7==0) ? 0.95 : 0.6;
+    ctx.fillRect(x, y, i%7==0?2:1, i%11==0?2:1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHearts(t){
   hearts.forEach(h=>{
     const pulse = 1 + Math.sin(t*0.004 + h.x*0.01)*0.08;
-    ctx.save(); ctx.translate(h.x,h.y); ctx.scale(pulse,pulse);
-    const r = h.r;
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.scale(pulse,pulse);
     ctx.beginPath();
+    const r = h.r;
     ctx.moveTo(0,-r*0.2);
-    ctx.bezierCurveTo(r,-r, r,r*0.6,0,r);
-    ctx.bezierCurveTo(-r,r*0.6,-r,-r,0,-r*0.2);
-    ctx.fillStyle="#ff77aa"; ctx.fill(); ctx.restore();
+    ctx.bezierCurveTo(r,-r, r*1.6, -r*0.1, 0, r);
+    ctx.bezierCurveTo(-r*1.6, -r*0.1, -r, -r, 0, -r*0.2);
+    ctx.fillStyle = 'rgba(255,120,180,0.95)';
+    ctx.fill();
+    ctx.restore();
   });
 }
 
-// Main loop
-let last = performance.now();
-function loop(now){
-  const dt = now-last; last=now;
-  update(dt); draw(now);
-  requestAnimationFrame(loop);
+function drawPlayer(t){
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r+8+Math.sin(t*0.008)*2, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,216,107,.25)'; ctx.fill();
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+  ctx.fillStyle = '#7ef9a9'; ctx.fill();
+  ctx.fillStyle = '#16354d';
+  ctx.beginPath(); ctx.arc(player.x-5, player.y-3, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(player.x+5, player.y-3, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(player.x, player.y+2, 6, Math.PI*0.15, Math.PI-0.15);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#16354d'; ctx.stroke();
 }
 
-// Start
-genHearts();
-loop(performance.now());
-playAgain.addEventListener('click', reset);
+function drawFireworks(){
+  for(let i=fireworks.length-1;i>=0;i--){
+    const p = fireworks[i];
+    p.x += p.vx; p.y += p.vy; p.life--;
+    p.vy += 0.02;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 2, 2);
+    ctx.globalCompositeOperation = 'source-over';
+    if(p.life<=0) fireworks.splice(i,1);
+  }
+}
+function drawConfetti(){
+  confetti.forEach(c=>{
+    c.y += c.vy; c.rot += c.vr;
+    if(c.y>H) c.y = -20;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.rot);
+    ctx.fillStyle = c.color;
+    ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
+    ctx.restore();
+  });
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = now - last; last = now;
+  drawBackground(now);
+  update(dt);
+  drawHearts(now);
+  drawPlayer(now);
+  drawFireworks();
+  drawConfetti();
+  requestAnimationFrame(frame);
+}
+
+reset();
+requestAnimationFrame(frame);
+
+/* Play again */
+playAgain.addEventListener('click', ()=>{
+  reset();
+});
+
 </script>
+
