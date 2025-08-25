@@ -39,7 +39,7 @@
   }
   #hud small{opacity:.9}
   #hud .dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--accent2);margin-right:6px}
-  #canvas{display:block;position:fixed;inset:0;z-index:-1}
+  #canvas{display:block;position:fixed;inset:0;z-index:0}
   #msg{
     position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
     max-width:min(92vw,820px);
@@ -117,7 +117,6 @@
       <div class="sp"></div>
     </div>
   </div>
-
 <script>
 /* =========================
    Config & Globals
@@ -372,5 +371,6 @@ playAgain.addEventListener('click', reset);
 
 
 </script>
+
 
 
